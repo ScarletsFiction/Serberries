@@ -24,14 +24,15 @@ module.exports = function(options){
 		started:[],
 		startup:[],
 		navigation:[],
-		removed:[]
+		removed:[],
+		httpstatus:[]
 	};
 
 	scope.server = http.createServer(function(req, res){
 		var urlData = url.parse(req.url);
     	urlData.get = urlQueryObject(urlData.query);
 
-		if(req.method == 'POST'){
+		if(req.method === 'POST'){
 			var queryData = "";
 
 		    req.on('data', function(data) {
@@ -49,11 +50,11 @@ module.exports = function(options){
 			    URLRequested(urlData, req, res)
 		    });
 		}
-		else if(req.method == 'GET'){
+		else if(req.method === 'GET'){
 			URLRequested(urlData, req, res);
 		}
 
-		else if(req.method == 'OPTIONS'){
+		else if(req.method === 'OPTIONS'){
 			res.setHeader("Access-Control-Allow-Origin", "*");
 			res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 		    res.writeHead(200);
@@ -95,13 +96,13 @@ module.exports = function(options){
 		if(reloadLimit) return;
 		reloadLimit = true;
 
-		if(updatedScript.length==0){
+		if(updatedScript.length===0){
 			updatedScript = getDirList(options.path);
 
 			for (var i = updatedScript.length - 1; i >= 0; i--) {
 				var temp = updatedScript[i].split('.js');
 
-				if(temp.length==1||temp[1].length!=0)
+				if(temp.length===1||temp[1].length!==0)
 					updatedScript.splice(i, 1);
 			}
 		}
@@ -117,7 +118,7 @@ module.exports = function(options){
 				if(scope.structure[fileName])
 					lastURL = scope.structure[fileName].path;
 
-				scope.structure[fileName] = reload(options.path+updatedScript[i]);
+				scope.structure[fileName] = reload(options.path + updatedScript[i]);
 				if(lastURL && lastURL !== scope.structure[fileName].path)
 					infoEvent('removed', lastURL, fileName);
 			} catch(e) {
@@ -146,6 +147,17 @@ module.exports = function(options){
 				}catch(e){
 					hasError(4, "Failed to initialize the new script", e);
 				}
+			} else if(scope.structure[fileName].childOf && scope.structure[scope.structure[fileName].childOf]) {
+				if(!scope.startup) continue;
+				var parent = scope.structure[fileName].childOf;
+				reload(options.path + updatedScript[i]);
+				scope.structure[parent] = reload(options.path + parent);
+				scope.structure[parent].scope(scopes[parent], scopes);
+				infoEvent('loaded', scope.structure[parent].path, 'reloaded');
+			} else {
+				// Not recognized
+				hasError(-1, "Not recognized '"+fileName+".js'");
+				delete scope.structure[fileName];
 			}
 		}
 
@@ -171,18 +183,24 @@ module.exports = function(options){
 
 		try{
 			var keys = Object.keys(scope.structure);
+			var path = '';
 			for (var i = 0; i < keys.length; i++) {
-		    	if (urlData.pathname == scope.structure[keys[i]].path) {
+				path = scope.structure[keys[i]].path.split('#');
+
+		    	if((path.length === 1 && urlData.pathname === path[0])
+		    		|| (path.length === 2 && urlData.pathname.indexOf(path[0]) !== -1))
+		    	{
 		    		scope.structure[keys[i]].response(urlData, res, closeConnection);
 		    	    return;
 		    	}
 			}
-		}catch(e){
+		} catch(e) {
 			hasError(2, "Failed to serve URL request '"+req.url+"'", e);
 		}
 		
 		// If page was not found
 		res.writeHead(404);
+		infoEvent('httpstatus', 404, closeConnection);
 		closeConnection();
 	}
 
@@ -260,7 +278,7 @@ function urlQueryObject(data_){
 	var data = data_;
 	if(data){
 		try{
-			if(data.charAt(0)=='{' || data.charAt(0)=='[')
+			if(data.charAt(0) === '{' || data.charAt(0) === '[')
 				data = JSON.parse(data);
 			else{
 				data = JSON.parse('{"' + data.split('&').join('","').split('=').join('":"') + '"}',

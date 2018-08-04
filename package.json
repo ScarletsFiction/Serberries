@@ -14,7 +14,7 @@
     "url": "https://github.com/ScarletsFiction/SkyLibrary/issues"
   },
   "scripts": {
-    "test": "tests/index.js"
+    "test": "test/index.js"
   },
   "homepage": "https://github.com/ScarletsFiction/SkyLibrary"
 }
