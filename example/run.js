@@ -1,7 +1,7 @@
-var SkyLibary = require('../index.js');
+var SkyLibrary = require('../index.js');
 
 var myserver = new SkyLibary({
-	path:__dirname+'/structure'
+	path:__dirname+'/SkyLibrary'
 });
 
 myserver.on('error', function(errcode, msg, trace){
