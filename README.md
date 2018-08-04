@@ -8,6 +8,10 @@ SkyLibrary is a fast Nodejs live webserver that able to live refresh your script
 
 This library was useful if you always updating your server script but tired of waiting the server restart.
 
+## Install
+To install this library, you can download from this repository or use
+> $ npm install skylibrary
+
 ## Sample Usage
 
 ```js
