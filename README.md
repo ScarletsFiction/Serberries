@@ -2,7 +2,7 @@
 
 [![Written by](https://img.shields.io/badge/Written%20by-ScarletsFiction-%231e87ff.svg)](LICENSE)
 [![Software License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=SkyLibrary%20can%20be%20used%20for%20developing%20live%20server%20with%20nodejs&url=https://github.com/ScarletsFiction/SkyLibrary&via=github&hashtags=skylibrary,live,refresh,server,node)
+[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=SkyLibrary%20is%20a%20fast%20Nodejs%20live%20webserver%20that%20able%20to%20live%20refresh%20your%20script%20on%20the%20realtime.&url=https://github.com/ScarletsFiction/SkyLibrary&via=github&hashtags=skylibrary,live,refresh,server,node)
 
 # SkyLibrary
 SkyLibrary is a fast Nodejs live webserver that able to live refresh your script on the realtime.
