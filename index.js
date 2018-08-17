@@ -199,9 +199,13 @@ module.exports = function(options){
 		}
 		
 		// If page was not found
-		res.writeHead(404);
-		infoEvent('httpstatus', 404, closeConnection);
-		closeConnection();
+		try{
+			res.writeHead(404);
+			infoEvent('httpstatus', 404, closeConnection);
+			closeConnection();
+		} catch(e) {
+			// The connection already closed
+		}
 	}
 
 	// Notify all user if server need to restart
