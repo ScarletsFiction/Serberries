@@ -1,20 +1,20 @@
 {
-  "name": "skylibrary",
-  "description": "SkyLibrary is a fast Nodejs live webserver that able to live refresh your script on the realtime.",
+  "name": "serberries",
+  "description": "Serberries is a fast Nodejs live webserver that able to live refresh your script on the realtime.",
   "main": "index.js",
   "version": "1.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ScarletsFiction/SkyLibrary.git"
+    "url": "https://github.com/ScarletsFiction/Serberries.git"
   },
-  "keywords": ["skylibrary", "live", "refresh", "server"],
+  "keywords": ["serberries", "live", "refresh", "server"],
   "author": "ScarletsFiction",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ScarletsFiction/SkyLibrary/issues"
+    "url": "https://github.com/ScarletsFiction/Serberries/issues"
   },
   "scripts": {
     "test": "test/index.js"
   },
-  "homepage": "https://github.com/ScarletsFiction/SkyLibrary"
+  "homepage": "https://github.com/ScarletsFiction/Serberries"
 }

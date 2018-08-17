@@ -2,23 +2,23 @@
 
 [![Written by](https://img.shields.io/badge/Written%20by-ScarletsFiction-%231e87ff.svg)](LICENSE)
 [![Software License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=SkyLibrary%20is%20a%20fast%20Nodejs%20live%20webserver%20that%20able%20to%20live%20refresh%20your%20script%20on%20the%20realtime.&url=https://github.com/ScarletsFiction/SkyLibrary&via=github&hashtags=skylibrary,live,refresh,server,node)
+[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Serberries%20is%20a%20fast%20Nodejs%20live%20webserver%20that%20able%20to%20live%20refresh%20your%20script%20on%20the%20realtime.&url=https://github.com/ScarletsFiction/Serberries&via=github&hashtags=serberries,live,refresh,server,node)
 
-# SkyLibrary
-SkyLibrary is a fast Nodejs live webserver that able to live refresh your script on the realtime.
+# Serberries
+Serberries is a fast Nodejs live webserver that able to live refresh your script on the realtime.
 
-This library was useful if you always updating your server script but tired of waiting the server restart.
+This library was useful if you always updating your server script but tired of restarting your server every changes.
 
 ## Install
 To install this library, you can download from this repository or use
-> $ npm install skylibrary
+> $ npm install serberries
 
 ## Sample Usage
 
 ```js
-var SkyLibrary = require('skylibrary');
+var Serberries = require('serberries');
 
-var myserver = new SkyLibrary({
+var myserver = new Serberries({
     path:__dirname+'/router' // Required
     // (Put all your router on root folder)
 });
@@ -124,12 +124,12 @@ module.exports = {
 
 ## Contribution
 
-If you want to help in SkyLibrary, please fork this project and edit on your repository, then make a pull request to here.
+If you want to help in Serberries, please fork this project and edit on your repository, then make a pull request to here.
 
 Keep the code simple and clear.
 
 ## License
 
-SkyLibrary is under the MIT license.
+Serberries is under the MIT license.
 
 But don't forget to put the a link to this repository.

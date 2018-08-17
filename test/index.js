@@ -1,6 +1,6 @@
-var SkyLibrary = require('../index.js');
+var Serberries = require('../index.js');
 
-var myserver = new SkyLibrary({
+var myserver = new Serberries({
 	path:__dirname+'/../example/router/'
 });
 
