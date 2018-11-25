@@ -226,7 +226,6 @@ module.exports = function(options){
 
 		    // Replace last slash as 'index.html'
 		    var file = path.join(publicFolder, reqpath.replace(/\/$/, '/index.html'));
-		    console.log(132131231, publicFolder + path.sep);
 		    if (file.indexOf(publicFolder + path.sep) !== 0) {
 					infoEvent('navigation', urlData);
 			        res.statusCode = 403;
