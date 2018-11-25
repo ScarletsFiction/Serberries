@@ -39,8 +39,8 @@ module.exports = function(options){
 	};
 
 	var publicFolder = false;
-	scope.setPublicFolder = function(path){
-		publicFolder = path;
+	scope.setPublicFolder = function(path_){
+		publicFolder = path.resolve(path_);
 	}
 
 	scope.server = http.createServer(function(req, res){
@@ -189,8 +189,6 @@ module.exports = function(options){
 		if(!urlData.post) urlData.post = {};
 		urlData.headers = req.headers;
 
-		infoEvent('navigation', urlData);
-
 		var closeConnection = function(data){
 			urlData = null;
 			if(res.end) res.end(data||'');
@@ -198,13 +196,14 @@ module.exports = function(options){
 
 		try{
 			var keys = Object.keys(scope.structure);
-			var path = '';
+			var path_ = '';
 			for (var i = 0; i < keys.length; i++) {
-				path = scope.structure[keys[i]].path.split('#');
+				path_ = scope.structure[keys[i]].path.split('#');
 
-		    	if((path.length === 1 && urlData.pathname === path[0])
-		    		|| (path.length === 2 && urlData.pathname.indexOf(path[0]) !== -1))
+		    	if((path_.length === 1 && urlData.pathname === path_[0])
+		    		|| (path_.length === 2 && urlData.pathname.indexOf(path_[0]) !== -1))
 		    	{
+					infoEvent('navigation', urlData);
 		    		scope.structure[keys[i]].response(urlData, res, closeConnection);
 		    	    return;
 		    	}
@@ -218,13 +217,18 @@ module.exports = function(options){
 	    try{
 			var reqpath = req.url.toString().split('?')[0].split('..').join('');
 		    if (req.method !== 'GET') {
+				infoEvent('navigation', urlData);
 		        res.statusCode = 501;
 				infoEvent('httpstatus', 501, closeConnection);
 		        res.setHeader('Content-Type', 'text/plain');
 		        return closeConnection('Method not implemented');
 		    }
+
+		    // Replace last slash as 'index.html'
 		    var file = path.join(publicFolder, reqpath.replace(/\/$/, '/index.html'));
+		    console.log(132131231, publicFolder + path.sep);
 		    if (file.indexOf(publicFolder + path.sep) !== 0) {
+					infoEvent('navigation', urlData);
 			        res.statusCode = 403;
 					infoEvent('httpstatus', 403, closeConnection);
 			        res.setHeader('Content-Type', 'text/plain');
@@ -242,6 +246,7 @@ module.exports = function(options){
 	    });
 	    s.on('error', function () {
 	    	try{
+				infoEvent('navigation', urlData);
 		        res.setHeader('Content-Type', 'text/plain');
 		        res.statusCode = 404;
 				infoEvent('httpstatus', 404, closeConnection);
