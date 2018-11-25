@@ -19,9 +19,12 @@ To install this library, you can download from this repository or use
 var Serberries = require('serberries');
 
 var myserver = new Serberries({
-    path:__dirname+'/router' // Required
+    path:__dirname+'/router' // Required as logic folder
     // (Put all your router on root folder)
 });
+
+// Set public folder for serving static assets
+myserver.setPublicFolder("../public");
 
 myserver.on('error', function(errcode, msg, trace){
     console.error("Error code: "+errcode+' ('+msg+')');
@@ -47,7 +50,7 @@ myserver.on('stop', function(){
 });
 
 myserver.on('started', function(){
-    console.log("Server started on http://localhost:80");
+    console.log("Server was started");
 });
 
 myserver.on('removed', function(urlpath){
@@ -55,18 +58,15 @@ myserver.on('removed', function(urlpath){
 });
 
 myserver.on('httpstatus', function(code, callback){
-    callback('HTTP status '+code);
+    callback('Returning HTTP status '+code);
 });
 
 myserver.on('navigation', function(data){
-    if(data.headers['user-agent'].indexOf('Indy Library')!=-1)
-        return; // Some people might have this browser bugs on port 80
-
     console.log("Navigation to '"+data.path+"'");
     console.log('  - '+data.headers['user-agent']);
 });
 
-myserver.start(80);
+myserver.start(8000);
 ```
 
 The main router of the server 
