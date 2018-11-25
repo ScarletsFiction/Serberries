@@ -1,8 +1,18 @@
-//var reload = require('require-reload')(require);
 var http = require('http');
 var fs = require('fs');
 var path = require('path');
 var url = require('url');
+
+var mime = {
+    html: 'text/html',
+    txt: 'text/plain',
+    css: 'text/css',
+    gif: 'image/gif',
+    jpg: 'image/jpeg',
+    png: 'image/png',
+    svg: 'image/svg+xml',
+    js: 'application/javascript'
+};
 
 module.exports = function(options){
 	if(typeof options !== 'object' || !options.path)
@@ -27,6 +37,11 @@ module.exports = function(options){
 		removed:[],
 		httpstatus:[]
 	};
+
+	var publicFolder = false;
+	scope.setPublicFolder = function(path){
+		publicFolder = path;
+	}
 
 	scope.server = http.createServer(function(req, res){
 		var urlData = url.parse(req.url);
@@ -198,14 +213,41 @@ module.exports = function(options){
 			hasError(2, "Failed to serve URL request '"+req.url+"'", e);
 		}
 		
-		// If page was not found
-		try{
-			res.writeHead(404);
-			infoEvent('httpstatus', 404, closeConnection);
-			closeConnection();
-		} catch(e) {
-			// The connection already closed
-		}
+		// If logic was not found
+		// Check if it's file resource was found
+	    try{
+			var reqpath = req.url.toString().split('?')[0].split('..').join('');
+		    if (req.method !== 'GET') {
+		        res.statusCode = 501;
+				infoEvent('httpstatus', 501, closeConnection);
+		        res.setHeader('Content-Type', 'text/plain');
+		        return closeConnection('Method not implemented');
+		    }
+		    var file = path.join(publicFolder, reqpath.replace(/\/$/, '/index.html'));
+		    if (file.indexOf(publicFolder + path.sep) !== 0) {
+			        res.statusCode = 403;
+					infoEvent('httpstatus', 403, closeConnection);
+			        res.setHeader('Content-Type', 'text/plain');
+			        return closeConnection('Forbidden');
+		    }
+		} catch(e){}
+
+	    var type = mime[path.extname(file).slice(1)] || 'text/plain';
+	    var s = fs.createReadStream(file);
+	    s.on('open', function () {
+	    	try{
+		        res.setHeader('Content-Type', type);
+		        s.pipe(res);
+		    } catch(e){}
+	    });
+	    s.on('error', function () {
+	    	try{
+		        res.setHeader('Content-Type', 'text/plain');
+		        res.statusCode = 404;
+				infoEvent('httpstatus', 404, closeConnection);
+		        closeConnection('Not found');
+		    } catch(e){}
+	    });
 	}
 
 	// Notify all user if server need to restart
