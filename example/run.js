@@ -3,8 +3,15 @@ var Serberries = require('../index.js');
 
 var myserver = new Serberries({
     path:__dirname+'/router' // Required
-    // (Put all your router on root folder)
+    // Put all your router on root folder
+    // All folder on path will be reloaded on any changes
 });
+
+// Set public folder for serving static assets
+// myserver.setPublicFolder("../public");
+
+// Set variable to be accessed from the router scopes
+myserver.scopes.myWorld = "my world";
 
 myserver.on('error', function(errcode, msg, trace){
     console.error("Error code: "+errcode+' ('+msg+')');
@@ -22,7 +29,10 @@ myserver.on('loading', function(filename){
 });
 
 myserver.on('loaded', function(urlpath, type){
-    console.log('URL to '+urlpath+' was '+type);
+    if(urlpath[0] === '/')
+        console.log('URL to '+urlpath+' was '+type);
+    else
+        console.log(urlpath+' was '+type);
 });
 
 myserver.on('stop', function(){
@@ -30,7 +40,7 @@ myserver.on('stop', function(){
 });
 
 myserver.on('started', function(){
-    console.log("Server started on http://localhost:80");
+    console.log("Server started on http://localhost:8000");
 });
 
 myserver.on('removed', function(urlpath){
@@ -42,11 +52,8 @@ myserver.on('httpstatus', function(code, callback){
 });
 
 myserver.on('navigation', function(data){
-    if(data.headers['user-agent'].indexOf('Indy Library')!=-1)
-        return; // Some people might have this browser bugs on port 80
-
     console.log("Navigation to '"+data.path+"'");
     console.log('  - '+data.headers['user-agent']);
 });
 
-myserver.start(80);
+myserver.start(8000);

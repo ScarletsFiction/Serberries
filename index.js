@@ -25,6 +25,8 @@ module.exports = function(options){
 	scope.structure = {};
 
 	var scopes = {}; // Structure scope
+	scope.scopes = scopes;
+	
 	var onError = [];
 	scope.startup = false;
 	var onInfo = {
@@ -152,6 +154,11 @@ module.exports = function(options){
 
 			if(typeof scope.structure[fileName].scope === 'function'){
 				try{
+					if(!scope.structure[fileName].path || !scope.structure[fileName].scope || !scope.structure[fileName].response){
+						console.log(fileName+'.js', "doesn't have minimal router structure");
+						continue;
+					}
+
 					var type = 'updated';
 					if(!scopes[fileName]){
 						scopes[fileName] = {};
@@ -198,6 +205,11 @@ module.exports = function(options){
 			var keys = Object.keys(scope.structure);
 			var path_ = '';
 			for (var i = 0; i < keys.length; i++) {
+				if(!scope.structure[keys[i]].path){
+					console.log(keys[i], "Doesn't have any URL path and will be skipped");
+					continue;
+				}
+
 				path_ = scope.structure[keys[i]].path.split('#');
 
 		    	if((path_.length === 1 && urlData.pathname === path_[0])
