@@ -15,11 +15,8 @@ var mime = {
 };
 
 module.exports = function(options){
-	if(typeof options !== 'object' || !options.path)
-		throw new Error("Structure path must be specified");
-
-	if(options.path[options.path.length-1] !== '/'
-		|| options.path[options.path.length-1] !== '\\') options.path += '/';
+	if(options.maxRequestSize === undefined)
+		options.maxRequestSize = 1e6;
 
 	var scope = this;
 	scope.structure = {};
@@ -39,6 +36,9 @@ module.exports = function(options){
 		removed:[],
 		httpstatus:[]
 	};
+
+	if(options.public !== undefined)
+		publicFolder = path.resolve(options.public);
 
 	var publicFolder = false;
 	scope.setPublicFolder = function(path_){
@@ -72,11 +72,18 @@ module.exports = function(options){
 		}
 
 		else if(req.method === 'OPTIONS'){
-			res.setHeader("Access-Control-Allow-Origin", "*");
-			res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		    res.writeHead(200);
-		    res.end();
 			urlData = null;
+			var origin = req.headers.origin;
+			if(options.allowedOrigins === undefined || options.allowedOrigins.indexOf(origin) !== -1){
+				// Set CORS headers
+			    res.setHeader('Access-Control-Allow-Origin', origin);
+				res.setHeader('Access-Control-Request-Method', '*');
+				res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST');
+				res.setHeader('Access-Control-Allow-Headers', '*');
+				res.setHeader('Access-Control-Allow-Credentials', true);
+			}
+			res.writeHead(200);
+			res.end(); // Close the connection
 		}
 	});
 
@@ -99,44 +106,87 @@ module.exports = function(options){
 
 	// ==== Reloader ====
 	var updatedScript = [];
-	fs.watch(options.path, {recursive: true}, function(eventType, filename){
-		var name = filename.split('.js');
-		if(name.length === 2 && name[1].length === 0){
-			if(updatedScript.indexOf(filename) === -1)
-				updatedScript.push(filename);
+
+	var router_ = [];
+	if(options.modules !== undefined){
+		if(options.modules.constructor === String)
+			router_.push(options.modules);
+		else router_.push(...options.modules);
+	}
+	if(options.path !== undefined){
+		if(options.path.constructor === String)
+			router_.push(options.path);
+		else router_.push(...options.path);
+	}
+	if(options.router !== undefined){
+		if(options.router.constructor === String)
+			router_.push(options.router);
+		else router_.push(...options.router);
+	}
+
+	for (var i = 0; i < router_.length; i++) {
+		let rootPath = router_[i];
+		if(rootPath[0] !== '/' || rootPath[0] !== '\\' || rootPath[1] !== ':')
+			rootPath = './'+rootPath;
+
+		fs.watch(router_[i], {recursive: true}, function(eventType, filename){
+			var name = filename.split('.js');
+			if(name.length === 2 && name[1].length === 0){
+				filename = rootPath+'/'+filename;
+				if(updatedScript.indexOf(filename) === -1)
+					updatedScript.push(filename);
+			}
+			setTimeout(ScriptReloader, 1000);
+		});
+	}
+
+	var newScript = [];
+	newScript.push(...router_);
+	for (var i = 0; i < newScript.length; i++) {
+		var newScript_ = getFiles(newScript[i]+'/', true);
+		var realpath = fs.realpathSync(newScript[i]+'/').split('\\').join('/').split('/')
+		realpath.pop();
+		realpath = realpath.join('/');
+
+		for (var a = newScript_.length - 1; a >= 0; a--) {
+			var temp = newScript_[a].split('.js');
+
+			if(temp.length !== 1 && temp[1].length === 0){
+				newScript_[a] = newScript_[a].split('\\').join('/').split('/');
+				updatedScript.push(newScript_[a].join('/').replace(realpath, '.'));
+			}
 		}
-		if(eventType === 'change') setTimeout(ScriptReloader, 1000);
-	});
+	}
+	newScript.splice(0);
 
 	var reloadLimit = false;
 	function ScriptReloader(){
 		if(reloadLimit) return;
 		reloadLimit = true;
 
-		if(updatedScript.length===0){
-			updatedScript = getDirList(options.path);
-
-			for (var i = updatedScript.length - 1; i >= 0; i--) {
-				var temp = updatedScript[i].split('.js');
-
-				if(temp.length===1||temp[1].length!==0)
-					updatedScript.splice(i, 1);
-			}
-		}
+		if(updatedScript.length === 0)
+			return;
 
 		for (var i = 0; i < updatedScript.length; i++) {
 			var fileName = updatedScript[i].split('.js');
 			fileName.pop();
-			fileName = fileName.join('js');
-			infoEvent('loading', fileName+'.js');
+			fileName = fileName.join('js').replace('./', '');
+			infoEvent('loading', fileName);
+
+			if(scope.structure[fileName] === undefined)
+				scope.structure[fileName] = {};
+			var currentRef = scope.structure[fileName];
 
 			try{
 				var lastURL = false;
-				if(scope.structure[fileName])
-					lastURL = scope.structure[fileName].path;
+				if(currentRef)
+					lastURL = currentRef.path;
 
-				scope.structure[fileName] = reload(options.path + updatedScript[i]);
-				if(lastURL && lastURL !== scope.structure[fileName].path)
+				if(currentRef.destroy)
+					currentRef.destroy();
+
+				Object.assign(currentRef, reload(updatedScript[i]));
+				if(lastURL && lastURL !== currentRef.path)
 					infoEvent('removed', lastURL, fileName);
 			} catch(e) {
 				hasError(3, "Error reloading server structure", e);
@@ -150,36 +200,24 @@ module.exports = function(options){
 		for (var i = 0; i < updatedScript.length; i++){
 			var fileName = updatedScript[i].split('.js');
 			fileName.pop();
-			fileName = fileName.join('js');
+			fileName = fileName.join('js').replace('./', '');
+			var currentRef = scope.structure[fileName];
 
-			if(typeof scope.structure[fileName].scope === 'function'){
-				try{
-					if(!scope.structure[fileName].path || !scope.structure[fileName].scope || !scope.structure[fileName].response){
-						console.log(fileName+'.js', "doesn't have minimal router structure");
-						continue;
-					}
-
-					var type = 'updated';
-					if(!scopes[fileName]){
-						scopes[fileName] = {};
-						type = 'added';
-					}
-					scope.structure[fileName].scope(scopes[fileName], scopes);
-					infoEvent('loaded', scope.structure[fileName].path, type);
-				}catch(e){
-					hasError(4, "Failed to initialize the new script", e);
+			try{
+				var type = 'updated';
+				if(!scopes[fileName]){
+					scopes[fileName] = {};
+					type = 'added';
 				}
-			} else if(scope.structure[fileName].childOf && scope.structure[scope.structure[fileName].childOf]) {
-				if(!scope.startup) continue;
-				var parent = scope.structure[fileName].childOf;
-				reload(options.path + updatedScript[i]);
-				scope.structure[parent] = reload(options.path + parent);
-				scope.structure[parent].scope(scopes[parent], scopes);
-				infoEvent('loaded', scope.structure[parent].path, 'reloaded');
-			} else {
-				// Not recognized
-				hasError(-1, "Not recognized '"+fileName+".js'");
-				delete scope.structure[fileName];
+
+				if(typeof currentRef.scope === 'function')
+					currentRef.scope(scopes[fileName], scopes, scope.structure);
+				else if(typeof currentRef.init === 'function')
+					currentRef.init(scopes[fileName], scopes, scope.structure);
+
+				infoEvent('loaded', currentRef.path, type);
+			}catch(e){
+				hasError(4, "Failed to initialize the new script", e);
 			}
 		}
 
@@ -189,6 +227,8 @@ module.exports = function(options){
 		if(!scope.startup){
 			scope.startup = true;
 			infoEvent('started', true);
+			if(options.onLoaded !== undefined)
+				onLoaded();
 		}
 	}
 
@@ -205,10 +245,8 @@ module.exports = function(options){
 			var keys = Object.keys(scope.structure);
 			var path_ = '';
 			for (var i = 0; i < keys.length; i++) {
-				if(!scope.structure[keys[i]].path){
-					console.log(keys[i], "Doesn't have any URL path and will be skipped");
+				if(!scope.structure[keys[i]].path)
 					continue;
-				}
 
 				path_ = scope.structure[keys[i]].path.split('#');
 
@@ -222,6 +260,9 @@ module.exports = function(options){
 			}
 		} catch(e) {
 			hasError(2, "Failed to serve URL request '"+req.url+"'", e);
+			res.statusCode = 500;
+			infoEvent('httpstatus', 500, closeConnection);
+			closeConnection();
 		}
 		
 		// If logic was not found
@@ -239,31 +280,36 @@ module.exports = function(options){
 		    // Replace last slash as 'index.html'
 		    var file = path.join(publicFolder, reqpath.replace(/\/$/, '/index.html'));
 		    if (file.indexOf(publicFolder + path.sep) !== 0) {
-					infoEvent('navigation', urlData);
-			        res.statusCode = 403;
-					infoEvent('httpstatus', 403, closeConnection);
-			        res.setHeader('Content-Type', 'text/plain');
-			        return closeConnection('Forbidden');
+				infoEvent('navigation', urlData);
+			    res.statusCode = 403;
+				infoEvent('httpstatus', 403, closeConnection);
+			    res.setHeader('Content-Type', 'text/plain');
+			    return closeConnection('Forbidden');
 		    }
 		} catch(e){}
 
-	    var type = mime[path.extname(file).slice(1)] || 'text/plain';
-	    var s = fs.createReadStream(file);
-	    s.on('open', function () {
-	    	try{
-		        res.setHeader('Content-Type', type);
-		        s.pipe(res);
-		    } catch(e){}
-	    });
-	    s.on('error', function () {
-	    	try{
+		function resNotFound(){
+			try{
 				infoEvent('navigation', urlData);
 		        res.setHeader('Content-Type', 'text/plain');
 		        res.statusCode = 404;
 				infoEvent('httpstatus', 404, closeConnection);
 		        closeConnection('Not found');
 		    } catch(e){}
-	    });
+		}
+
+		if(file !== undefined){
+			type = mime[path.extname(file).slice(1)] || 'text/plain';
+
+		    var s = fs.createReadStream(file);
+		    s.on('open', function(){
+		    	try{
+			        res.setHeader('Content-Type', type);
+			        s.pipe(res);
+			    } catch(e){}
+		    });
+		    s.on('error', resNotFound);
+		} else resNotFound();
 	}
 
 	// Notify all user if server need to restart
@@ -301,19 +347,17 @@ module.exports = function(options){
 	}
 }
 
-
-
-function getDirList(path, folderOnly){
-	var isDirectory = function(source){
-		 return fs.lstatSync(source).isDirectory();
-	}
+var isDirectory = function(source){
+	 return fs.lstatSync(source).isDirectory();
+}
+function getFiles(path, recursive){
+	path = fs.realpathSync(path) + '/';
 	var list = fs.readdirSync(path);
 	var fileList = [];
 	for (var i = 0; i < list.length; i++) { //folder
-		if(folderOnly && isDirectory(path+list[i]))
-			fileList.push(list[i]); //file
-		else if(!folderOnly&&!isDirectory(path+list[i]))
-			fileList.push(list[i]);
+		if(recursive && isDirectory(path + list[i]))
+			fileList.push(...getFiles(path + list[i], true)); //file
+		else fileList.push(path + list[i]);
 	}
 	return fileList;
 }

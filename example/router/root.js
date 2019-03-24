@@ -17,7 +17,7 @@ module.exports = {
 	response:response,
 
 	// Scope initialization after script loaded
-	scope:function(ref, allRef){
+	init:function(ref, allRef){
 		scope = ref;
 
 		// You can also access other scope with 'allRef'

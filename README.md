@@ -19,17 +19,31 @@ To install this library, you can download from this repository or use
 var Serberries = require('serberries');
 
 var myserver = new Serberries({
-    path:__dirname+'/router' // Required as logic folder
-    // Put all your router on root folder
-    // All folder on path will be reloaded on any changes
+    // path:__dirname+'/router', // (Deprecated)
+    router:'router', // Directory path if you want to route http request
+    modules:'modules', // Directory path for non router
+    // All folder above have live reload on any script changes
+    
+    maxRequestSize:1e6, // Maximum size when receiving POST data
+    allowedOrigins:['www.example.com'], // Allow CORS request
+    public:"../public", // Set public folder for serving static assets
 });
 
-// Set public folder for serving static assets
-myserver.setPublicFolder("../public");
+// Set public folder for serving static assets (Deprecated)
+// myserver.setPublicFolder("../public");
 
 // Set variable to be accessed from the router scopes
 myserver.scopes.myWorld = "my world";
 
+// Obtaining reference of http.createServer() to be used in Socket.io or other
+// var app = myserver.server;
+
+// Starting the server
+myserver.start(8000);
+```
+
+### Listen to events
+```js
 myserver.on('error', function(errcode, msg, trace){
     console.error("Error code: "+errcode+' ('+msg+')');
     if(trace){
@@ -69,11 +83,9 @@ myserver.on('navigation', function(data){
     console.log("Navigation to '"+data.path+"'");
     console.log('  - '+data.headers['user-agent']);
 });
-
-myserver.start(8000);
 ```
 
-The main router of the server 
+### Using router for handling request
 
 ```js
 // hello.js
@@ -113,7 +125,8 @@ module.exports = {
     response:response,
 
     // Scope initialization after script loaded
-    scope:function(ref, scopes){
+    // scope:function(){}, [Deprecated]
+    init:function(ref, scopes){
         scope = ref;
         myWorld = scopes.myWorld;
 
@@ -127,22 +140,33 @@ module.exports = {
         // 
         // ref === scopes['hello']
         // scopes.myWorld === "my world"
+    },
+
+    // Optional if you want to destroy some data when script was reloaded
+    destroy:function(){
+
     }
 }
 ```
 
-When you want to reload your script dependency, you should put it inside your server folder and specify it's parent in `module.exports`
+### Define modules for the server
+Actually you're free to build your module structure, but make sure that you saving your variables on the scope if you want to reuse it. Any variable that not referenced in another object will be removed when garbage collection process. Variable that referenced inside of setInterval or Event is not removed if it's still running.
 
 ```js
-// ext/hello.js
-function hello(){
-    return 'Hello';
-}
-
+// library-1.js
+var scope = null;
 module.exports = {
-    // This parent is hello.js
-    childOf:'hello', // Minimal structure to enable live reload
-    hello:hello
+    // Optional if you want to access other scope
+    // or saving data for current scope
+    init:function(ref, allRef){
+        // Running once this script was loaded
+        scope = ref;
+    },
+
+    // Optional if you want to destroy some data when script was reloaded
+    destroy:function(){
+
+    }
 }
 ```
 

@@ -2,7 +2,8 @@
 var Serberries = require('../index.js');
 
 var myserver = new Serberries({
-    path:__dirname+'/router' // Required
+    router:"router", // Optional if you want to route http request
+    modules:"modules", // Optional if you want to live load scripts
     // Put all your router on root folder
     // All folder on path will be reloaded on any changes
 });

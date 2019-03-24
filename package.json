@@ -2,7 +2,7 @@
   "name": "serberries",
   "description": "Serberries is a fast Nodejs live webserver that able to live refresh your script on the realtime.",
   "main": "index.js",
-  "version": "1.1.2",
+  "version": "1.3.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/ScarletsFiction/Serberries.git"
