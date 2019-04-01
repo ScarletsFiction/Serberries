@@ -45,20 +45,35 @@ module.exports = function(options){
 		publicFolder = path.resolve(path_);
 	}
 
-	scope.server = http.createServer(function(req, res){
+	scope.onRequest = function(req, res){
 		var urlData = url.parse(req.url);
     	urlData.get = urlQueryObject(urlData.query);
 
 		if(req.method === 'POST'){
 			var queryData = "";
+			if(res.onData !== undefined){ // uWebSocket.js
+				queryData = new Uint8Array(0);
+				res.onData(function(data, end){
+					var tmp = new Uint8Array(queryData.length + data.byteLength);
+					tmp.set(queryData, 0);
+					tmp.set(new Uint8Array(buffer2), queryData.length);
+					queryData = tmp;
+					if(end === true){
+						urlData.post = urlQueryObject(Buffer.from(queryData.buffer).toString('utf8'));
+						URLRequested(urlData, req, res);
+						queryData = null;
+					}
+				});
+			}
 
 		    req.on('data', function(data) {
 		        queryData += data;
 		        if(queryData.length > 1e6) {
 		            queryData = "";
 		            hasError(1, "Data too big", urlData);
-		            res.writeHead(413, {'Content-Type': 'text/plain'}).end();
-		            req.connection.destroy();
+		            res.writeHead(413);
+		            res.setHeader('Content-Type', 'text/plain');
+		            res.end();
 		        }
 		    });
 
@@ -85,7 +100,9 @@ module.exports = function(options){
 			res.writeHead(200);
 			res.end(); // Close the connection
 		}
-	});
+	}
+
+	scope.server = http.createServer(scope.onRequest);
 
 	scope.on = function(event, func){
 		if(event === 'error')
@@ -96,7 +113,8 @@ module.exports = function(options){
 
 	scope.start = function(port){
 		ScriptReloader();
-		scope.server.listen(port || options.port || 80);
+		if(port === undefined) port = options.port || 80;
+		if(port !== 0) scope.server.listen(port);
 	}
 	scope.stop = function(){
 		infoEvent('stop', true);
@@ -238,7 +256,7 @@ module.exports = function(options){
 
 		var closeConnection = function(data){
 			urlData = null;
-			if(res.end) res.end(data||'');
+			if(res.end) res.end(data || '');
 		};
 
 		try{
@@ -299,7 +317,7 @@ module.exports = function(options){
 		}
 
 		if(file !== undefined){
-			type = mime[path.extname(file).slice(1)] || 'text/plain';
+			var type = mime[path.extname(file).slice(1)] || 'text/plain';
 
 		    var s = fs.createReadStream(file);
 		    s.on('open', function(){
