@@ -285,6 +285,8 @@ module.exports = function(options){
 		
 		// If logic was not found
 		// Check if it's file resource was found
+		if(publicFolder === false)
+			return resNotFound();
 	    try{
 			var reqpath = req.url.toString().split('?')[0].split('..').join('');
 		    if (req.method !== 'GET') {
@@ -304,7 +306,10 @@ module.exports = function(options){
 			    res.setHeader('Content-Type', 'text/plain');
 			    return closeConnection('Forbidden');
 		    }
-		} catch(e){}
+		} catch(e){
+			hasError(4, "Something error", e);
+			closeConnection();
+		}
 
 		function resNotFound(){
 			try{
@@ -312,8 +317,11 @@ module.exports = function(options){
 		        res.setHeader('Content-Type', 'text/plain');
 		        res.statusCode = 404;
 				infoEvent('httpstatus', 404, closeConnection);
-		        closeConnection('Not found');
-		    } catch(e){}
+		        return closeConnection('Not found');
+		    } catch(e){
+				hasError(4, "Something error", e);
+				closeConnection();
+			}
 		}
 
 		if(file !== undefined){
@@ -324,7 +332,10 @@ module.exports = function(options){
 		    	try{
 			        res.setHeader('Content-Type', type);
 			        s.pipe(res);
-			    } catch(e){}
+			    } catch(e){
+					hasError(4, "Something error", e);
+					closeConnection();
+				}
 		    });
 		    s.on('error', resNotFound);
 		} else resNotFound();
