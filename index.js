@@ -47,7 +47,7 @@ module.exports = function(options){
 
 	scope.onRequest = function(req, res){
 		var urlData = url.parse(req.url);
-    	urlData.get = urlQueryObject(urlData.query);
+    	urlData.get = urlQueryObject(urlData.query).post;
 
 		if(req.method === 'POST'){
 			var queryData = "";
@@ -59,9 +59,11 @@ module.exports = function(options){
 					tmp.set(new Uint8Array(data), queryData.length);
 					queryData = tmp;
 					if(end === true){
-						urlData.post = urlQueryObject(Buffer.from(queryData.buffer).toString('utf8'));
+						tmp = urlQueryObject(Buffer.from(queryData.buffer).toString('utf8'));
+						urlData.file = tmp.file;
+						urlData.post = tmp.post;
 						URLRequested(urlData, req, res);
-						queryData = null;
+						tmp = queryData = null;
 					}
 				});
 				return;
@@ -79,13 +81,15 @@ module.exports = function(options){
 		    });
 
 		    req.on('end', function() {
-			    urlData.post = urlQueryObject(queryData);
-			    URLRequested(urlData, req, res)
+			    var tmp = urlQueryObject(queryData);
+				urlData.file = tmp.file;
+				urlData.post = tmp.post;
+			    URLRequested(urlData, req, res);
 		    });
 		}
-		else if(req.method === 'GET'){
+		
+		else if(req.method === 'GET')
 			URLRequested(urlData, req, res);
-		}
 
 		else if(req.method === 'OPTIONS'){
 			urlData = null;
@@ -412,25 +416,24 @@ function reload(name){
 
 function urlQueryObject(data_){
 	var data = data_;
+	var ret = {post:{}, file:{}};
 	if(data){
 		try{
 			if(data.charAt(0) === '{' || data.charAt(0) === '[')
-				data = JSON.parse(data);
+				ret.post = JSON.parse(data);
 			else if(data.indexOf('--') === 0){
 				return multipartBody(data);
 			}
 			else{
-				data = JSON.parse('{"' + data.split('&').join('","').split('=').join('":"') + '"}',
+				ret.post = JSON.parse('{"' + data.split('&').join('","').split('=').join('":"') + '"}',
 	        	    function(key, value){
 	        	    	return key === "" ? value : decodeURIComponent(value)
 	        	    }
 	        	);
 			}
-		} catch(e){
-			data = {};
-		}
-	} else data = {};
-	return data;
+		} catch(e){}
+	}
+	return ret;
 }
 
 function multipartBody(bodyBuffer){
