@@ -56,7 +56,7 @@ module.exports = function(options){
 				res.onData(function(data, end){
 					var tmp = new Uint8Array(queryData.length + data.byteLength);
 					tmp.set(queryData, 0);
-					tmp.set(new Uint8Array(buffer2), queryData.length);
+					tmp.set(new Uint8Array(data), queryData.length);
 					queryData = tmp;
 					if(end === true){
 						urlData.post = urlQueryObject(Buffer.from(queryData.buffer).toString('utf8'));
@@ -64,6 +64,7 @@ module.exports = function(options){
 						queryData = null;
 					}
 				});
+				return;
 			}
 
 		    req.on('data', function(data) {
@@ -415,6 +416,9 @@ function urlQueryObject(data_){
 		try{
 			if(data.charAt(0) === '{' || data.charAt(0) === '[')
 				data = JSON.parse(data);
+			else if(data.indexOf('--') === 0){
+				return multipartBody(data);
+			}
 			else{
 				data = JSON.parse('{"' + data.split('&').join('","').split('=').join('":"') + '"}',
 	        	    function(key, value){
@@ -426,5 +430,55 @@ function urlQueryObject(data_){
 			data = {};
 		}
 	} else data = {};
+	return data;
+}
+
+function multipartBody(bodyBuffer){
+	var boundary = bodyBuffer.match(/-.*/)[0];
+	bodyBuffer = bodyBuffer.split(boundary);
+	bodyBuffer.shift(); // First boundary
+	bodyBuffer.pop(); // End of boundary
+
+	var data = {post:{}, file:{}};
+
+	for (var i = 0; i < bodyBuffer.length; i++) {
+		var ref = bodyBuffer[i];
+
+	    // Parse stream
+		if(ref.indexOf('application/octet-stream') !== -1){
+			var match = ref.match(/name="([^"]*)".*stream[;\r\n]+([^\r\n].*)$/s);
+			data.post[match[1]] = $match[2] || '';
+		}
+
+		// Parse file data
+		else if(ref.indexOf('; filename=') !== -1){
+			var match = ref.match(/name="([^"]*)"; filename="([^"]*)"[;\r\n]+([^\r\n].*)$/s);
+			var mime = match[3].match(/Content-Type: (.*)?/);
+
+			var content = match[3].replace(/Content-Type: (.*)[^\n\r]/, '').trim();
+			var index = match[1].match(/^(.*)\[\]$/i);
+			if(!index) index = match[1];
+
+	        data.file[index] = {
+	        	name:match[2],
+	        	type:mime[1],
+	        	data:Buffer.from(content)
+	        }
+		}
+
+	    // Parse multiform data
+	    else {
+	        var match = ref.match(/name="([^"]*)"[;\r\n]+([^\r\n].*)$/s);
+	        var tmp = match[1].match(/^(.*)\[\]$/i);
+	        var content = match[2].trim() || '';
+
+	        if(tmp){
+	        	if(data.post[tmp[1]] === undefined)
+	        		data.post[tmp[1]] = [];
+	        	data.post[tmp[1]].push(content);
+	        }
+	        else data.post[match[1]] = content;
+	    }
+	}
 	return data;
 }
