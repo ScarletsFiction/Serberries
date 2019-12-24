@@ -149,8 +149,6 @@ module.exports = function(options){
 
 	for (var i = 0; i < router_.length; i++) {
 		let rootPath = router_[i];
-		if(rootPath[0] !== '/' || rootPath[0] !== '\\' || rootPath[1] !== ':')
-			rootPath = './'+rootPath;
 
 		fs.watch(router_[i], {recursive: true}, function(eventType, filename){
 			var name = filename.split('.js');
@@ -224,9 +222,9 @@ module.exports = function(options){
 			var fileName = updatedScript[i].split('.js');
 			fileName.pop();
 			fileName = fileName.join('js').replace('./', '');
-			var currentRef = scope.structure[fileName];
 
 			try{
+				var currentRef = scope.structure[fileName];
 				var type = 'updated';
 				if(!scopes[fileName]){
 					scopes[fileName] = {};
