@@ -260,6 +260,11 @@ module.exports = function(options){
 		var closeConnection = function(data){
 			urlData = null;
 			if(res.end) res.end(data || '');
+
+			// Disable another response when connection ended
+			res.end = res.write = function(){
+				throw new Error("Connection already closed");
+			};
 		};
 
 		try{
@@ -283,7 +288,7 @@ module.exports = function(options){
 			hasError(2, "Failed to serve URL request '"+req.url+"'", e);
 			res.statusCode = 500;
 			infoEvent('httpstatus', 500, closeConnection);
-			closeConnection();
+			return closeConnection();
 		}
 		
 		// If logic was not found
@@ -311,7 +316,7 @@ module.exports = function(options){
 		    }
 		} catch(e){
 			hasError(4, "Something error", e);
-			closeConnection();
+			return closeConnection();
 		}
 
 		function resNotFound(){
